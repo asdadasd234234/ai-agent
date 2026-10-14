@@ -1,0 +1,1032 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Make.com Style Agent</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #f4f5f9;
+            --grid-color: #e5e7eb;
+            --node-bg: #ffffff;
+            --text-main: #1f2937;
+            --text-muted: #6b7280;
+            --primary: #8b5cf6;
+            --yt-color: #ef4444;
+            --tg-color: #0ea5e9;
+            --dc-color: #5865F2;
+            --em-color: #f59e0b;
+            --cg-color: #10a37f;
+            --yh-color: #6001d2;
+            --wire-color: #9ca3af;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            background-image: radial-gradient(var(--grid-color) 2px, transparent 2px);
+            background-size: 30px 30px;
+            color: var(--text-main);
+            overflow: hidden;
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+        }
+
+        /* CANVAS & NODES */
+        .canvas {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 150px;
+        }
+        
+        .actions-column {
+            display: flex;
+            flex-direction: column;
+            gap: 40px;
+            align-items: center;
+        }
+
+        .node-wrapper {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            z-index: 10;
+        }
+
+        .node {
+            width: 90px;
+            height: 90px;
+            border-radius: 50%;
+            background: var(--node-bg);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            position: relative;
+            border: 3px solid transparent;
+        }
+
+        .node:hover {
+            transform: scale(1.05);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.12);
+        }
+
+        .node.yt { border-color: var(--yt-color); }
+        .node.tg { border-color: var(--tg-color); }
+        .node.dc { border-color: var(--dc-color); }
+        .node.em { border-color: var(--em-color); }
+        .node.cg { border-color: var(--cg-color); }
+        .node.yh { border-color: var(--yh-color); }
+
+        .node img {
+            width: 45px;
+            height: 45px;
+            object-fit: contain;
+        }
+
+        .node-label {
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-main);
+            background: white;
+            padding: 4px 10px;
+            border-radius: 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+
+        /* SVG WIRES */
+        .svg-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .wire {
+            fill: none;
+            stroke: var(--wire-color);
+            stroke-width: 4;
+            stroke-linecap: round;
+        }
+
+        .wire-pulse {
+            fill: none;
+            stroke: var(--primary);
+            stroke-width: 4;
+            stroke-dasharray: 10 15;
+            animation: pulse-flow 1s linear infinite;
+            display: none;
+        }
+
+        @keyframes pulse-flow {
+            to { stroke-dashoffset: -25; }
+        }
+
+        /* BOTTOM BAR */
+        .bottom-bar {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: white;
+            padding: 15px 30px;
+            border-radius: 40px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            z-index: 20;
+        }
+
+        .btn {
+            border: none;
+            padding: 10px 24px;
+            border-radius: 30px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+        }
+
+        .btn-run {
+            background: var(--primary);
+            color: white;
+        }
+        .btn-run:hover { background: #7c3aed; }
+        .btn-run:disabled { background: #c4b5fd; cursor: not-allowed; }
+
+        .btn-stop {
+            background: #f3f4f6;
+            color: #ef4444;
+        }
+        .btn-stop:hover { background: #e5e7eb; }
+        .btn-stop:disabled { color: #fca5a5; cursor: not-allowed; }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-muted);
+            border-left: 1px solid #e5e7eb;
+            padding-left: 20px;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #d1d5db;
+        }
+
+        .status-dot.running { background: #10b981; box-shadow: 0 0 10px rgba(16, 185, 129, 0.5); }
+
+        /* MODALS (SIDEBAR STYLES) */
+        .overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.2);
+            backdrop-filter: blur(2px);
+            z-index: 40;
+            display: none;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .sidebar {
+            position: fixed;
+            top: 0;
+            right: -400px;
+            width: 400px;
+            height: 100%;
+            background: white;
+            box-shadow: -5px 0 25px rgba(0,0,0,0.1);
+            z-index: 50;
+            transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            padding: 30px;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+
+        .sidebar.open { right: 0; }
+        .overlay.open { display: block; opacity: 1; }
+
+        .sidebar-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .sidebar-icon { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+        .sidebar-icon.yt { background: #fee2e2; }
+        .sidebar-icon.tg { background: #e0f2fe; }
+        .sidebar-icon.dc { background: #e0e7ff; }
+        .sidebar-icon.em { background: #fef3c7; }
+        .sidebar-icon.cg { background: #d1fae5; }
+        .sidebar-icon.yh { background: #e0c2ff; }
+        .sidebar-icon img { width: 24px; height: 24px; }
+
+        .sidebar-title h2 { font-size: 18px; color: var(--text-main); }
+        .sidebar-title p { font-size: 13px; color: var(--text-muted); }
+
+        .close-btn {
+            margin-left: auto;
+            background: none; border: none; font-size: 24px; color: var(--text-muted); cursor: pointer;
+        }
+
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; font-size: 13px; font-weight: 500; color: var(--text-main); margin-bottom: 8px; }
+        .form-group input { 
+            width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; 
+            border-radius: 8px; font-size: 14px; outline: none; transition: border-color 0.2s;
+        }
+        .form-group input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1); }
+
+        .finder-box {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .finder-box h3 { font-size: 13px; margin-bottom: 10px; color: var(--text-main); }
+        
+        .btn-secondary {
+            background: white; border: 1px solid #d1d5db; padding: 8px 15px; border-radius: 6px;
+            font-size: 13px; cursor: pointer; transition: background 0.2s;
+        }
+        .btn-secondary:hover { background: #f3f4f6; }
+
+        .btn-save {
+            background: var(--primary); color: white; border: none; padding: 12px; border-radius: 8px;
+            font-size: 15px; font-weight: 500; cursor: pointer; transition: background 0.2s;
+        }
+        .btn-save:hover { background: #7c3aed; }
+
+        .btn-danger {
+            background: #fef2f2; color: #ef4444; border: 1px solid #fecaca; padding: 12px; border-radius: 8px;
+            font-size: 15px; font-weight: 500; cursor: pointer; transition: all 0.2s;
+        }
+        .btn-danger:hover { background: #fee2e2; }
+
+        #finderResult { margin-top: 10px; font-size: 13px; font-family: monospace; color: var(--primary); word-break: break-all;}
+
+        /* ADD MODULE LOGIC */
+        .add-module-btn {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            border: 2px dashed #9ca3af;
+            background: white;
+            color: #9ca3af;
+            font-size: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            z-index: 10;
+        }
+        .add-module-btn:hover { border-color: var(--primary); color: var(--primary); transform: scale(1.1); box-shadow: 0 8px 25px rgba(0,0,0,0.1); }
+
+        .catalog-modal {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+            z-index: 60;
+            width: 400px;
+            display: none;
+        }
+        .catalog-modal.open { display: block; }
+        .catalog-modal h2 { font-size: 20px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
+        
+        .catalog-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 15px;
+            border: 1px solid #e5e7eb;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .catalog-item:hover { background: #f8fafc; border-color: var(--primary); }
+        .catalog-item.disabled { opacity: 0.5; pointer-events: none; background: #f3f4f6; }
+
+        /* AI ASSISTANT */
+        .ai-fab { position: fixed; bottom: 100px; right: 30px; width: 60px; height: 60px; border-radius: 50%; background: linear-gradient(135deg, #8b5cf6, #3b82f6); color: white; font-size: 24px; display: flex; align-items: center; justify-content: center; box-shadow: 0 10px 25px rgba(139, 92, 246, 0.4); cursor: pointer; z-index: 100; transition: transform 0.2s; }
+        .ai-fab:hover { transform: scale(1.1); }
+        .ai-window { position: fixed; bottom: 170px; right: 30px; width: 350px; height: 450px; background: white; border-radius: 20px; box-shadow: 0 15px 40px rgba(0,0,0,0.15); display: flex; flex-direction: column; z-index: 100; overflow: hidden; opacity: 0; pointer-events: none; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); transform: translateY(20px); }
+        .ai-window.open { opacity: 1; pointer-events: auto; transform: translateY(0); }
+        .ai-header { padding: 15px 20px; background: linear-gradient(135deg, #8b5cf6, #3b82f6); color: white; display: flex; justify-content: space-between; align-items: center; }
+        .ai-header h3 { font-size: 16px; font-weight: 600; margin: 0; display:flex; align-items:center; gap:8px;}
+        .ai-header .close-btn { color: white; opacity: 0.8; margin: 0;}
+        .ai-header .close-btn:hover { opacity: 1; }
+        .ai-body { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; background: #f8fafc; }
+        .ai-message { max-width: 85%; padding: 10px 15px; border-radius: 15px; font-size: 13px; line-height: 1.4; word-wrap: break-word;}
+        .ai-message.bot { background: white; color: var(--text-main); align-self: flex-start; border-bottom-left-radius: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .ai-message.user { background: var(--primary); color: white; align-self: flex-end; border-bottom-right-radius: 5px; box-shadow: 0 2px 5px rgba(139, 92, 246, 0.2); }
+        .ai-footer { padding: 15px; background: white; border-top: 1px solid #e2e8f0; display: flex; gap: 10px; }
+        .ai-footer input { flex: 1; padding: 10px 15px; border: 1px solid #d1d5db; border-radius: 20px; font-size: 13px; outline: none; transition: border-color 0.2s; }
+        .ai-footer input:focus { border-color: var(--primary); }
+        .ai-btn { background: var(--primary); color: white; border: none; border-radius: 20px; padding: 0 15px; cursor: pointer; transition: background 0.2s; display:flex; align-items:center; justify-content:center;}
+        .ai-btn:hover { background: #7c3aed; }
+        .ai-btn:disabled { background: #c4b5fd; cursor: not-allowed; }
+    </style>
+</head>
+<body>
+
+    <!-- SVG Canvas for connection wires -->
+    <svg class="svg-canvas" id="svgCanvas"></svg>
+
+    <!-- Node Canvas -->
+    <div class="canvas" id="nodeCanvas">
+        
+        <!-- YouTube Node -->
+        <div class="node-wrapper" id="ytNodeWrapper">
+            <div class="node yt" onclick="openSidebar('yt')">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/0/09/YouTube_full-color_icon_%282017%29.svg" alt="YT">
+            </div>
+            <div class="node-label">Watch Videos</div>
+        </div>
+
+        <div class="actions-column" id="actionsColumn">
+            <!-- Modules injected by JS -->
+        </div>
+
+    </div>
+
+    <!-- Bottom Action Bar -->
+    <div class="bottom-bar">
+        <button class="btn btn-run" id="runBtn" onclick="startAgent()">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg> Run once
+        </button>
+        <button class="btn btn-stop" id="stopBtn" onclick="stopAgent()" disabled>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h12v12H6z"/></svg> Stop
+        </button>
+        <div class="status-indicator">
+            <div class="status-dot" id="statusDot"></div>
+            <span id="statusText">Stopped</span>
+        </div>
+    </div>
+
+    <!-- Overlay -->
+    <div class="overlay" id="overlay" onclick="closeModals()"></div>
+
+    <!-- Module Catalog -->
+    <div class="catalog-modal" id="catalogModal">
+        <h2>Add Module <button class="close-btn" onclick="closeModals()">&times;</button></h2>
+        
+        <div class="catalog-item" id="catalog-tg" onclick="addModule('tg')">
+            <div class="sidebar-icon tg"><img src="https://upload.wikimedia.org/wikipedia/commons/8/82/Telegram_logo.svg"></div>
+            <div>
+                <div style="font-weight: 500; font-size: 15px;">Telegram</div>
+                <div style="font-size: 12px; color: var(--text-muted);">Send message to chat/channel</div>
+            </div>
+        </div>
+
+        <div class="catalog-item" id="catalog-dc" onclick="addModule('dc')">
+            <div class="sidebar-icon dc"><img src="https://assets-global.website-files.com/6257adef93867e50d84d30e2/636e0a6a49cf127bf92de1e2_icon_clyde_blurple_RGB.png" style="width:24px;"></div>
+            <div>
+                <div style="font-weight: 500; font-size: 15px;">Discord</div>
+                <div style="font-size: 12px; color: var(--text-muted);">Send message via Webhook</div>
+            </div>
+        </div>
+
+        <div class="catalog-item" id="catalog-em" onclick="addModule('em')">
+            <div class="sidebar-icon em"><span style="font-size: 20px;">📧</span></div>
+            <div>
+                <div style="font-weight: 500; font-size: 15px;">Email</div>
+                <div style="font-size: 12px; color: var(--text-muted);">Send via Gmail SMTP</div>
+            </div>
+        </div>
+
+        <div class="catalog-item" id="catalog-cg" onclick="addModule('cg')">
+            <div class="sidebar-icon cg"><img src="https://upload.wikimedia.org/wikipedia/commons/0/04/ChatGPT_logo.svg" style="width:24px;"></div>
+            <div>
+                <div style="font-weight: 500; font-size: 15px;">ChatGPT</div>
+                <div style="font-size: 12px; color: var(--text-muted);">Generate text with AI</div>
+            </div>
+        </div>
+
+        <div class="catalog-item" id="catalog-yh" onclick="addModule('yh')">
+            <div class="sidebar-icon yh"><span style="font-size: 16px; font-weight: bold; color: #6001d2; font-family: sans-serif;">Y!</span></div>
+            <div>
+                <div style="font-weight: 500; font-size: 15px;">Yahoo Mail</div>
+                <div style="font-size: 12px; color: var(--text-muted);">Send via Yahoo SMTP</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- YouTube Sidebar -->
+    <div class="sidebar" id="sidebar-yt">
+        <div class="sidebar-header">
+            <div class="sidebar-icon yt"><img src="https://upload.wikimedia.org/wikipedia/commons/0/09/YouTube_full-color_icon_%282017%29.svg"></div>
+            <div class="sidebar-title">
+                <h2>Watch New Videos</h2>
+                <p>YouTube Module</p>
+            </div>
+            <button class="close-btn" onclick="closeModals()">&times;</button>
+        </div>
+
+        <div class="finder-box">
+            <h3>🔍 Channel ID Finder</h3>
+            <div style="display: flex; gap: 8px;">
+                <input type="text" id="channelHandle" placeholder="@username" style="flex: 1; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px;">
+                <button class="btn-secondary" onclick="findChannelId()">Find</button>
+            </div>
+            <div id="finderResult"></div>
+        </div>
+
+        <div class="form-group">
+            <label>Channel ID *</label>
+            <input type="text" id="configChannelId" placeholder="UC...">
+        </div>
+
+        <div style="display: flex; gap: 10px; margin-top: auto;">
+            <button class="btn-save" style="flex: 1;" onclick="closeModals()">OK</button>
+        </div>
+    </div>
+
+    <!-- Telegram Sidebar -->
+    <div class="sidebar" id="sidebar-tg">
+        <div class="sidebar-header">
+            <div class="sidebar-icon tg"><img src="https://upload.wikimedia.org/wikipedia/commons/8/82/Telegram_logo.svg"></div>
+            <div class="sidebar-title">
+                <h2>Send a Message</h2>
+                <p>Telegram Bot Module</p>
+            </div>
+            <button class="close-btn" onclick="closeModals()">&times;</button>
+        </div>
+        <div class="form-group">
+            <label>Bot Token *</label>
+            <input type="text" id="configBotToken" value="8887322177:AAEK8fsl3hotiAUqqmPBZ2KdaRsPpkIFVYM">
+        </div>
+        <div class="form-group">
+            <label>Chat ID *</label>
+            <input type="text" id="configChatId" value="@antitestagent">
+        </div>
+        <div style="display: flex; gap: 10px; margin-top: auto;">
+            <button class="btn-danger" style="flex: 1;" onclick="removeModule('tg')">Delete</button>
+            <button class="btn-save" style="flex: 2;" onclick="closeModals()">OK</button>
+        </div>
+    </div>
+
+    <!-- Discord Sidebar -->
+    <div class="sidebar" id="sidebar-dc">
+        <div class="sidebar-header">
+            <div class="sidebar-icon dc"><img src="https://assets-global.website-files.com/6257adef93867e50d84d30e2/636e0a6a49cf127bf92de1e2_icon_clyde_blurple_RGB.png" style="width:24px;"></div>
+            <div class="sidebar-title">
+                <h2>Send to Discord</h2>
+                <p>Discord Webhook Module</p>
+            </div>
+            <button class="close-btn" onclick="closeModals()">&times;</button>
+        </div>
+        <div class="form-group">
+            <label>Webhook URL *</label>
+            <input type="text" id="configDiscordWebhook" placeholder="https://discord.com/api/webhooks/...">
+        </div>
+        <div style="display: flex; gap: 10px; margin-top: auto;">
+            <button class="btn-danger" style="flex: 1;" onclick="removeModule('dc')">Delete</button>
+            <button class="btn-save" style="flex: 2;" onclick="closeModals()">OK</button>
+        </div>
+    </div>
+
+    <!-- Email Sidebar -->
+    <div class="sidebar" id="sidebar-em">
+        <div class="sidebar-header">
+            <div class="sidebar-icon em"><span style="font-size: 20px;">📧</span></div>
+            <div class="sidebar-title">
+                <h2>Send Email</h2>
+                <p>Gmail SMTP Module</p>
+            </div>
+            <button class="close-btn" onclick="closeModals()">&times;</button>
+        </div>
+        <div class="form-group">
+            <label>Gmail Address *</label>
+            <input type="text" id="configEmailUser" placeholder="you@gmail.com">
+        </div>
+        <div class="form-group">
+            <label>App Password *</label>
+            <input type="password" id="configEmailPass" placeholder="16-letter app password">
+        </div>
+        <div class="form-group">
+            <label>Send To Email *</label>
+            <input type="text" id="configEmailTo" placeholder="recipient@gmail.com">
+        </div>
+        <div style="display: flex; gap: 10px; margin-top: auto;">
+            <button class="btn-danger" style="flex: 1;" onclick="removeModule('em')">Delete</button>
+            <button class="btn-save" style="flex: 2;" onclick="closeModals()">OK</button>
+        </div>
+    </div>
+
+    <!-- ChatGPT Sidebar -->
+    <div class="sidebar" id="sidebar-cg">
+        <div class="sidebar-header">
+            <div class="sidebar-icon cg"><img src="https://upload.wikimedia.org/wikipedia/commons/0/04/ChatGPT_logo.svg"></div>
+            <div class="sidebar-title">
+                <h2>ChatGPT Settings</h2>
+                <p>AI Text Generation</p>
+            </div>
+            <button class="close-btn" onclick="closeModals()">&times;</button>
+        </div>
+        <div class="form-group">
+            <label>OpenAI API Key *</label>
+            <input type="password" id="configOpenAiKey" placeholder="sk-...">
+        </div>
+        <div class="form-group">
+            <label>Prompt Template</label>
+            <textarea id="configOpenAiPrompt" style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; outline: none; resize: vertical; min-height: 80px;" placeholder="Напиши пост про видео: {title} {link}">Напиши короткий, привлекательный анонс для нового YouTube видео. Название: {title}. Ссылка: {link}</textarea>
+        </div>
+        <div style="display: flex; gap: 10px; margin-top: auto;">
+            <button class="btn-danger" style="flex: 1;" onclick="removeModule('cg')">Delete</button>
+            <button class="btn-save" style="flex: 2;" onclick="closeModals()">OK</button>
+        </div>
+    </div>
+
+    <!-- Yahoo Sidebar -->
+    <div class="sidebar" id="sidebar-yh">
+        <div class="sidebar-header">
+            <div class="sidebar-icon yh"><span style="font-size: 16px; font-weight: bold; color: #6001d2; font-family: sans-serif;">Y!</span></div>
+            <div class="sidebar-title">
+                <h2>Send Yahoo Mail</h2>
+                <p>Yahoo SMTP Module</p>
+            </div>
+            <button class="close-btn" onclick="closeModals()">&times;</button>
+        </div>
+        <div class="form-group">
+            <label>Yahoo Address *</label>
+            <input type="text" id="configYahooUser" placeholder="you@yahoo.com">
+        </div>
+        <div class="form-group">
+            <label>App Password *</label>
+            <input type="password" id="configYahooPass" placeholder="App password">
+        </div>
+        <div class="form-group">
+            <label>Send To Email *</label>
+            <input type="text" id="configYahooTo" placeholder="recipient@example.com">
+        </div>
+        <div style="display: flex; gap: 10px; margin-top: auto;">
+            <button class="btn-danger" style="flex: 1;" onclick="removeModule('yh')">Delete</button>
+            <button class="btn-save" style="flex: 2;" onclick="closeModals()">OK</button>
+        </div>
+    </div>
+
+    <!-- AI Assistant Floating Button -->
+    <div class="ai-fab" onclick="toggleAiWindow()">✨</div>
+
+    <!-- AI Assistant Window -->
+    <div class="ai-window" id="aiWindow">
+        <div class="ai-header">
+            <h3>✨ AI-Сборка</h3>
+            <button class="close-btn" onclick="toggleAiWindow()">&times;</button>
+        </div>
+        <div class="ai-body" id="aiChatBody">
+            <div class="ai-message bot">Привет! Напиши, куда ты хочешь отправлять видео (например, "Хочу отправлять в телеграм и на почту, а текст пусть пишет чатгпт"), и я соберу путь для тебя!</div>
+        </div>
+        <div class="ai-footer">
+            <input type="text" id="aiInput" placeholder="Напиши запрос..." onkeypress="if(event.key === 'Enter') sendAiRequest()">
+            <button class="ai-btn" id="aiSendBtn" onclick="sendAiRequest()">➤</button>
+        </div>
+    </div>
+
+    <script>
+        const nodeTemplates = {
+            tg: `
+                <div class="node-wrapper action-node" id="tgNodeWrapper">
+                    <div class="node tg" onclick="openSidebar('tg')">
+                        <img src="https://upload.wikimedia.org/wikipedia/commons/8/82/Telegram_logo.svg" alt="TG">
+                    </div>
+                    <div class="node-label">Telegram</div>
+                </div>
+            `,
+            dc: `
+                <div class="node-wrapper action-node" id="dcNodeWrapper">
+                    <div class="node dc" onclick="openSidebar('dc')">
+                        <img src="https://assets-global.website-files.com/6257adef93867e50d84d30e2/636e0a6a49cf127bf92de1e2_icon_clyde_blurple_RGB.png" alt="DC" style="width: 50px; height: 50px;">
+                    </div>
+                    <div class="node-label">Discord</div>
+                </div>
+            `,
+            em: `
+                <div class="node-wrapper action-node" id="emNodeWrapper">
+                    <div class="node em" onclick="openSidebar('em')">
+                        <span style="font-size: 32px;">📧</span>
+                    </div>
+                    <div class="node-label">Email</div>
+                </div>
+            `,
+            cg: `
+                <div class="node-wrapper action-node" id="cgNodeWrapper">
+                    <div class="node cg" onclick="openSidebar('cg')">
+                        <img src="https://upload.wikimedia.org/wikipedia/commons/0/04/ChatGPT_logo.svg" alt="CG">
+                    </div>
+                    <div class="node-label">ChatGPT</div>
+                </div>
+            `,
+            yh: `
+                <div class="node-wrapper action-node" id="yhNodeWrapper">
+                    <div class="node yh" onclick="openSidebar('yh')">
+                        <span style="font-size: 24px; font-weight: bold; color: #6001d2; font-family: sans-serif;">Y!</span>
+                    </div>
+                    <div class="node-label">Yahoo</div>
+                </div>
+            `
+        };
+
+        let activeModules = ['tg'];
+
+        function renderModules() {
+            const container = document.getElementById('actionsColumn');
+            container.innerHTML = '';
+
+            // Render active nodes
+            activeModules.forEach(mod => {
+                container.innerHTML += nodeTemplates[mod];
+                document.getElementById('catalog-' + mod).classList.add('disabled');
+            });
+
+            // Update catalog items
+            ['tg', 'dc', 'em', 'cg', 'yh'].forEach(mod => {
+                if (!activeModules.includes(mod)) {
+                    document.getElementById('catalog-' + mod).classList.remove('disabled');
+                }
+            });
+
+            // Add the "+" button if less than 5 modules
+            if (activeModules.length < 5) {
+                container.innerHTML += `
+                    <div class="add-module-btn" onclick="openCatalog()">
+                        +
+                    </div>
+                `;
+            }
+
+            setTimeout(drawWire, 50); // Redraw wires after DOM updates
+        }
+
+        function addModule(mod) {
+            if (!activeModules.includes(mod)) {
+                activeModules.push(mod);
+                renderModules();
+            }
+            closeModals();
+        }
+
+        function removeModule(mod) {
+            activeModules = activeModules.filter(m => m !== mod);
+            
+            // Clear inputs so backend ignores this action
+            if (mod === 'tg') {
+                document.getElementById('configBotToken').value = '';
+                document.getElementById('configChatId').value = '';
+            } else if (mod === 'dc') {
+                document.getElementById('configDiscordWebhook').value = '';
+            } else if (mod === 'em') {
+                document.getElementById('configEmailUser').value = '';
+                document.getElementById('configEmailPass').value = '';
+                document.getElementById('configEmailTo').value = '';
+            } else if (mod === 'cg') {
+                document.getElementById('configOpenAiKey').value = '';
+            } else if (mod === 'yh') {
+                document.getElementById('configYahooUser').value = '';
+                document.getElementById('configYahooPass').value = '';
+                document.getElementById('configYahooTo').value = '';
+            }
+            
+            renderModules();
+            closeModals();
+        }
+
+        function openCatalog() {
+            document.getElementById('overlay').classList.add('open');
+            document.getElementById('catalogModal').classList.add('open');
+        }
+
+        // --- DRAWING THE WIRE ---
+        function drawWire() {
+            const svgCanvas = document.getElementById('svgCanvas');
+            svgCanvas.innerHTML = ''; // clear existing wires
+            
+            const ytNode = document.getElementById('ytNodeWrapper').querySelector('.node');
+            if (!ytNode) return;
+            const ytRect = ytNode.getBoundingClientRect();
+            const startX = ytRect.left + ytRect.width / 2;
+            const startY = ytRect.top + ytRect.height / 2;
+            
+            document.querySelectorAll('.action-node .node').forEach(actionNode => {
+                const rect = actionNode.getBoundingClientRect();
+                const endX = rect.left + rect.width / 2;
+                const endY = rect.top + rect.height / 2;
+                
+                const controlOffset = 80;
+                const pathData = `M ${startX + 45} ${startY} C ${startX + 45 + controlOffset} ${startY}, ${endX - 45 - controlOffset} ${endY}, ${endX - 45} ${endY}`;
+                
+                const wire = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                wire.setAttribute('class', 'wire');
+                wire.setAttribute('d', pathData);
+                
+                const pulse = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                pulse.setAttribute('class', 'wire-pulse');
+                pulse.setAttribute('d', pathData);
+                
+                // Keep pulse state
+                if (document.getElementById('statusDot').classList.contains('running')) {
+                    pulse.style.display = 'block';
+                }
+                
+                svgCanvas.appendChild(wire);
+                svgCanvas.appendChild(pulse);
+            });
+        }
+
+        window.addEventListener('resize', drawWire);
+
+        // --- SIDEBAR & MODAL LOGIC ---
+        function openSidebar(type) {
+            document.getElementById('overlay').classList.add('open');
+            document.getElementById('sidebar-' + type).classList.add('open');
+        }
+
+        function closeModals() {
+            document.getElementById('overlay').classList.remove('open');
+            document.getElementById('catalogModal').classList.remove('open');
+            document.querySelectorAll('.sidebar').forEach(el => el.classList.remove('open'));
+        }
+
+        // --- API & STATUS LOGIC ---
+        async function checkStatus() {
+            try {
+                const res = await fetch('/api/status');
+                const data = await res.json();
+                updateUIStatus(data.running);
+                
+                // Only populate on initial load if we don't have values
+                // to avoid resetting user's ongoing input
+                if (data.channel_id && !document.getElementById('configChannelId').value) {
+                    document.getElementById('configChannelId').value = data.channel_id;
+                    if(data.bot_token) document.getElementById('configBotToken').value = data.bot_token;
+                    if(data.chat_id) document.getElementById('configChatId').value = data.chat_id;
+                    if(data.discord_webhook) document.getElementById('configDiscordWebhook').value = data.discord_webhook;
+                    if(data.email_user) document.getElementById('configEmailUser').value = data.email_user;
+                    if(data.email_pass) document.getElementById('configEmailPass').value = data.email_pass;
+                    if(data.email_to) document.getElementById('configEmailTo').value = data.email_to;
+                    if(data.yahoo_user) document.getElementById('configYahooUser').value = data.yahoo_user;
+                    if(data.yahoo_pass) document.getElementById('configYahooPass').value = data.yahoo_pass;
+                    if(data.yahoo_to) document.getElementById('configYahooTo').value = data.yahoo_to;
+                    if(data.openai_api_key) document.getElementById('configOpenAiKey').value = data.openai_api_key;
+                    if(data.openai_prompt) document.getElementById('configOpenAiPrompt').value = data.openai_prompt;
+                    
+                    // Restore active modules based on backend config
+                    let backendModules = [];
+                    if (data.bot_token && data.chat_id) backendModules.push('tg');
+                    if (data.discord_webhook) backendModules.push('dc');
+                    if (data.email_user && data.email_to) backendModules.push('em');
+                    if (data.yahoo_user && data.yahoo_to) backendModules.push('yh');
+                    if (data.openai_api_key) backendModules.push('cg');
+                    
+                    if (backendModules.length > 0) {
+                        activeModules = backendModules;
+                        renderModules();
+                    }
+                }
+            } catch (e) {
+                console.error("Ошибка при получении статуса", e);
+            }
+        }
+        setInterval(checkStatus, 2000);
+        
+        // Initialize UI
+        renderModules();
+        checkStatus();
+
+        function updateUIStatus(isRunning) {
+            const dot = document.getElementById('statusDot');
+            const statusText = document.getElementById('statusText');
+            const runBtn = document.getElementById('runBtn');
+            const stopBtn = document.getElementById('stopBtn');
+
+            if (isRunning) {
+                dot.classList.add('running');
+                statusText.innerText = 'Running...';
+                runBtn.disabled = true;
+                stopBtn.disabled = false;
+                document.querySelectorAll('.wire-pulse').forEach(p => p.style.display = 'block');
+            } else {
+                dot.classList.remove('running');
+                statusText.innerText = 'Stopped';
+                runBtn.disabled = false;
+                stopBtn.disabled = true;
+                document.querySelectorAll('.wire-pulse').forEach(p => p.style.display = 'none');
+            }
+        }
+
+        async function findChannelId() {
+            const handle = document.getElementById('channelHandle').value.trim();
+            if (!handle) return;
+            const resultBox = document.getElementById('finderResult');
+            resultBox.innerHTML = 'Searching...';
+
+            try {
+                const res = await fetch(`/api/find_channel?handle=${encodeURIComponent(handle)}`);
+                const data = await res.json();
+                if (data.id) {
+                    resultBox.innerHTML = `ID: <b>${data.id}</b> <a href="#" onclick="useId('${data.id}')" style="color:var(--primary); margin-left:10px;">Use</a>`;
+                } else {
+                    resultBox.innerHTML = `<span style="color:red">Not found. Use @username.</span>`;
+                }
+            } catch (e) {
+                resultBox.innerHTML = `<span style="color:red">Network error.</span>`;
+            }
+        }
+
+        function useId(id) {
+            document.getElementById('configChannelId').value = id;
+            document.getElementById('finderResult').innerHTML = '<span style="color:green">ID Applied!</span>';
+        }
+
+        async function startAgent() {
+            const channelId = document.getElementById('configChannelId').value.trim();
+            const botToken = document.getElementById('configBotToken').value.trim();
+            const chatId = document.getElementById('configChatId').value.trim();
+            const discordWebhook = document.getElementById('configDiscordWebhook').value.trim();
+            const emailUser = document.getElementById('configEmailUser').value.trim();
+            const emailPass = document.getElementById('configEmailPass').value.trim();
+            const emailTo = document.getElementById('configEmailTo').value.trim();
+            
+            // Yahoo fields
+            const yahooUser = activeModules.includes('yh') ? document.getElementById('configYahooUser').value.trim() : '';
+            const yahooPass = activeModules.includes('yh') ? document.getElementById('configYahooPass').value.trim() : '';
+            const yahooTo = activeModules.includes('yh') ? document.getElementById('configYahooTo').value.trim() : '';
+            
+            // Only take values if CG module is active, so we can clear the backend if deleted
+            const openAiKey = activeModules.includes('cg') ? document.getElementById('configOpenAiKey').value.trim() : '';
+            const openAiPrompt = activeModules.includes('cg') ? document.getElementById('configOpenAiPrompt').value.trim() : '';
+
+            if (!channelId) {
+                alert("Please open the YouTube node settings and fill in the Channel ID before running.");
+                document.querySelector('.node.yt').style.border = "3px solid red";
+                setTimeout(() => { document.querySelector('.node.yt').style.border = "3px solid transparent"; }, 1000);
+                return;
+            }
+            
+            if (activeModules.length === 0) {
+                alert("Please add at least one Action Module (Telegram, Discord, or Email) to run.");
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/start_agent', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        channel_id: channelId, 
+                        bot_token: botToken, 
+                        chat_id: chatId,
+                        discord_webhook: discordWebhook,
+                        email_user: emailUser,
+                        email_pass: emailPass,
+                        email_to: emailTo,
+                        yahoo_user: yahooUser,
+                        yahoo_pass: yahooPass,
+                        yahoo_to: yahooTo,
+                        openai_api_key: openAiKey,
+                        openai_prompt: openAiPrompt
+                    })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    updateUIStatus(true);
+                } else {
+                    alert("Error starting: " + (data.error || "Unknown"));
+                }
+            } catch (e) {
+                alert("Network error.");
+            }
+        }
+
+        async function stopAgent() {
+            try {
+                const res = await fetch('/api/stop_agent', { method: 'POST' });
+                const data = await res.json();
+                if (data.success) {
+                    updateUIStatus(false);
+                }
+            } catch (e) {
+                alert("Network error.");
+            }
+        }
+
+        // --- AI ASSISTANT LOGIC ---
+        let aiHistory = [];
+
+        function toggleAiWindow() {
+            document.getElementById('aiWindow').classList.toggle('open');
+        }
+
+        function appendAiMessage(text, sender) {
+            const body = document.getElementById('aiChatBody');
+            const msgDiv = document.createElement('div');
+            msgDiv.className = `ai-message ${sender}`;
+            msgDiv.innerText = text;
+            body.appendChild(msgDiv);
+            body.scrollTop = body.scrollHeight;
+        }
+
+        async function sendAiRequest() {
+            const input = document.getElementById('aiInput');
+            const text = input.value.trim();
+            if (!text) return;
+
+            let apiKey = document.getElementById('configOpenAiKey') ? document.getElementById('configOpenAiKey').value.trim() : '';
+
+            appendAiMessage(text, 'user');
+            aiHistory.push({ role: 'user', content: text });
+            
+            input.value = '';
+            document.getElementById('aiSendBtn').disabled = true;
+
+            try {
+                const res = await fetch('/api/ai_build_path', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ history: aiHistory, api_key: apiKey })
+                });
+                const data = await res.json();
+                
+                if (data.success) {
+                    const result = data.result;
+                    
+                    if (result.reply) {
+                        appendAiMessage(result.reply, 'bot');
+                        aiHistory.push({ role: 'assistant', content: result.reply });
+                    }
+                    
+                    if (result.modules && result.modules.length > 0) {
+                        activeModules = [...new Set([...activeModules, ...result.modules])];
+                        renderModules();
+                    }
+                    
+                    if (result.config) {
+                        if (result.config.channel_id) document.getElementById('configChannelId').value = result.config.channel_id;
+                        if (result.config.bot_token) document.getElementById('configBotToken').value = result.config.bot_token;
+                        if (result.config.chat_id) document.getElementById('configChatId').value = result.config.chat_id;
+                        if (result.config.discord_webhook) document.getElementById('configDiscordWebhook').value = result.config.discord_webhook;
+                        if (result.config.email_user) document.getElementById('configEmailUser').value = result.config.email_user;
+                        if (result.config.email_pass) document.getElementById('configEmailPass').value = result.config.email_pass;
+                        if (result.config.email_to) document.getElementById('configEmailTo').value = result.config.email_to;
+                        if (result.config.yahoo_user) document.getElementById('configYahooUser').value = result.config.yahoo_user;
+                        if (result.config.yahoo_pass) document.getElementById('configYahooPass').value = result.config.yahoo_pass;
+                        if (result.config.yahoo_to) document.getElementById('configYahooTo').value = result.config.yahoo_to;
+                    }
+                } else {
+                    if (data.error && data.error.includes("OpenAI API Key")) {
+                        appendAiMessage('Укажи OpenAI API Key в настройках модуля ChatGPT перед использованием ассистента!', 'bot');
+                        if (!activeModules.includes('cg')) {
+                            addModule('cg'); // Add ChatGPT module automatically
+                        }
+                    } else {
+                        appendAiMessage('Ошибка: ' + (data.error || 'Что-то пошло не так.'), 'bot');
+                    }
+                }
+            } catch (e) {
+                appendAiMessage('Ошибка соединения.', 'bot');
+            }
+            
+            document.getElementById('aiSendBtn').disabled = false;
+        }
+    </script>
+</body>
+</html>
