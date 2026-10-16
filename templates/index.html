@@ -96,6 +96,10 @@
         .node.yh { border-color: var(--yh-color); }
         .node.rs { border-color: var(--rs-color); background: #1a1a1a; }
 
+        /* Fix RS sidebar width and open state */
+        #sidebar-rs { width: 440px; right: -440px; }
+        #sidebar-rs.open { right: 0 !important; }
+
         .node img {
             width: 45px;
             height: 45px;
@@ -498,10 +502,18 @@
                 <div style="font-size: 12px; color: var(--text-muted);">Send latest Rockstar video</div>
             </div>
         </div>
+
+        <div class="catalog-item" id="catalog-yt" onclick="addModule('yt')">
+            <div class="sidebar-icon yt"><img src="https://upload.wikimedia.org/wikipedia/commons/0/09/YouTube_full-color_icon_%282017%29.svg" style="width:24px;"></div>
+            <div>
+                <div style="font-weight: 500; font-size: 15px;">YouTube</div>
+                <div style="font-size: 12px; color: var(--text-muted);">Watch channel for new videos</div>
+            </div>
+        </div>
     </div>
 
     <!-- Rockstar GTA6 Sidebar -->
-    <div class="sidebar" id="sidebar-rs" style="width: 440px; right: -440px;">
+    <div class="sidebar" id="sidebar-rs">
         <div class="sidebar-header">
             <div class="sidebar-icon rs">
                 <svg width="28" height="28" viewBox="0 0 100 100" fill="none">
@@ -831,10 +843,18 @@
                     </div>
                     <div class="node-label">GTA 6</div>
                 </div>
+            `,
+            yt: `
+                <div class="node-wrapper action-node" id="ytModNodeWrapper">
+                    <div class="node yt" onclick="openSidebar('yt')">
+                        <img src="https://upload.wikimedia.org/wikipedia/commons/0/09/YouTube_full-color_icon_%282017%29.svg" alt="YT">
+                    </div>
+                    <div class="node-label">YouTube</div>
+                </div>
             `
         };
 
-        let activeModules = ['tg'];
+        let activeModules = [];
         let rsSelectedPlatforms = new Set();
 
         function toggleRsPlatform(platform) {
@@ -917,15 +937,15 @@
             });
 
             // Update catalog items
-            ['tg', 'dc', 'em', 'cg', 'yh', 'rs'].forEach(mod => {
+            ['tg', 'dc', 'em', 'cg', 'yh', 'rs', 'yt'].forEach(mod => {
                 if (!activeModules.includes(mod)) {
                     const catEl = document.getElementById('catalog-' + mod);
                     if (catEl) catEl.classList.remove('disabled');
                 }
             });
 
-            // Add the "+" button if less than 5 modules
-            if (activeModules.length < 5) {
+            // Add the "+" button if less than 6 modules
+            if (activeModules.length < 6) {
                 container.innerHTML += `
                     <div class="add-module-btn" onclick="openCatalog()">
                         +
