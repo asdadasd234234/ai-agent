@@ -108,6 +108,47 @@ def send_email_message(subject, text, user, password, to_email):
     except Exception as e:
         print(f"Ошибка при отправке Email: {e}")
 
+def send_yahoo_email_message(subject, text, user, password, to_email):
+    """Отправляет email через Yahoo SMTP"""
+    if not all([user, password, to_email]): return
+    try:
+        msg = MIMEText(text)
+        msg['Subject'] = subject
+        msg['From'] = user
+        msg['To'] = to_email
+        
+        server = smtplib.SMTP_SSL('smtp.mail.yahoo.com', 465)
+        server.login(user, password)
+        server.send_message(msg)
+        server.quit()
+        print(f"Сообщение успешно отправлено через Yahoo Mail!")
+    except Exception as e:
+        print(f"Ошибка при отправке Yahoo Mail: {e}")
+
+# ================= ROCKSTAR / GTA 6 MODULE =================
+ROCKSTAR_CHANNEL_ID = 'UCkfYjCGsoNVyuJEHLOBn0YQ'
+
+def get_rockstar_latest_video():
+    """Получает последнее видео с официального канала Rockstar Games через RSS"""
+    url = f'https://www.youtube.com/feeds/videos.xml?channel_id={ROCKSTAR_CHANNEL_ID}'
+    try:
+        response = requests.get(url, timeout=10)
+        response.raise_for_status()
+        root = ET.fromstring(response.content)
+        ns = {'atom': 'http://www.w3.org/2005/Atom', 'yt': 'http://www.youtube.com/xml/schemas/2015'}
+        entry = root.find('atom:entry', ns)
+        if entry is None:
+            return None
+        video_id = entry.find('yt:videoId', ns).text
+        title = entry.find('atom:title', ns).text
+        link = entry.find('atom:link', ns).attrib['href']
+        # Thumbnail
+        thumbnail = f'https://img.youtube.com/vi/{video_id}/maxresdefault.jpg'
+        return {'id': video_id, 'title': title, 'link': link, 'thumbnail': thumbnail}
+    except Exception as e:
+        print(f"Ошибка при получении видео Rockstar: {e}")
+        return None
+
 def generate_chatgpt_message(title, link, api_key, prompt):
     if not api_key:
         return None
@@ -331,6 +372,87 @@ def ai_build_path():
         return jsonify({"success": True, "result": result_json})
     except Exception as e:
         return jsonify({"success": False, "error": str(e)})
+
+@app.route('/api/send_gta_trailer', methods=['POST'])
+def send_gta_trailer():
+    """Отправляет последний трейлер Rockstar на выбранные платформы"""
+    data = request.json
+    platforms = data.get('platforms', [])
+    
+    video = get_rockstar_latest_video()
+    if not video:
+        return jsonify({'success': False, 'error': 'Не удалось получить видео с канала Rockstar Games. Попробуйте позже.'})
+    
+    title = video['title'].replace('[', '(').replace(']', ')')
+    link = video['link']
+    
+    results = []
+    errors = []
+    
+    if 'tg' in platforms:
+        bot_token = data.get('bot_token', '').strip()
+        chat_id = data.get('chat_id', '').strip()
+        if bot_token and chat_id:
+            msg = f"🎮 *GTA 6 | Rockstar Games*\n\n*{title}*\n\n{link}"
+            try:
+                send_telegram_message(msg, bot_token, chat_id)
+                results.append('Telegram')
+            except Exception as e:
+                errors.append(f'Telegram: {e}')
+        else:
+            errors.append('Telegram: не заполнен Bot Token или Chat ID')
+    
+    if 'dc' in platforms:
+        webhook = data.get('discord_webhook', '').strip()
+        if webhook:
+            msg = f"🎮 **GTA 6 | Rockstar Games**\n**{title}**\n{link}"
+            try:
+                send_discord_message(msg, webhook)
+                results.append('Discord')
+            except Exception as e:
+                errors.append(f'Discord: {e}')
+        else:
+            errors.append('Discord: не заполнен Webhook URL')
+    
+    if 'em' in platforms:
+        email_user = data.get('email_user', '').strip()
+        email_pass = data.get('email_pass', '').strip()
+        email_to = data.get('email_to', '').strip()
+        if email_user and email_pass and email_to:
+            subject = f'🎮 Rockstar: {title}'
+            body = f"Новое видео от Rockstar Games!\n\n{title}\n\nСмотреть: {link}"
+            try:
+                send_email_message(subject, body, email_user, email_pass, email_to)
+                results.append('Gmail')
+            except Exception as e:
+                errors.append(f'Gmail: {e}')
+        else:
+            errors.append('Gmail: не заполнены данные почты')
+    
+    if 'yh' in platforms:
+        yahoo_user = data.get('yahoo_user', '').strip()
+        yahoo_pass = data.get('yahoo_pass', '').strip()
+        yahoo_to = data.get('yahoo_to', '').strip()
+        if yahoo_user and yahoo_pass and yahoo_to:
+            subject = f'🎮 Rockstar: {title}'
+            body = f"Новое видео от Rockstar Games!\n\n{title}\n\nСмотреть: {link}"
+            try:
+                send_yahoo_email_message(subject, body, yahoo_user, yahoo_pass, yahoo_to)
+                results.append('Yahoo Mail')
+            except Exception as e:
+                errors.append(f'Yahoo Mail: {e}')
+        else:
+            errors.append('Yahoo Mail: не заполнены данные')
+    
+    if not results and errors:
+        return jsonify({'success': False, 'error': '; '.join(errors)})
+    
+    return jsonify({
+        'success': True,
+        'video': video,
+        'sent_to': results,
+        'errors': errors
+    })
 
 def open_browser():
     time.sleep(1.5)

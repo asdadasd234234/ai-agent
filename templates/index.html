@@ -19,6 +19,7 @@
             --em-color: #f59e0b;
             --cg-color: #10a37f;
             --yh-color: #6001d2;
+            --rs-color: #e8b923;
             --wire-color: #9ca3af;
         }
 
@@ -93,6 +94,7 @@
         .node.em { border-color: var(--em-color); }
         .node.cg { border-color: var(--cg-color); }
         .node.yh { border-color: var(--yh-color); }
+        .node.rs { border-color: var(--rs-color); background: #1a1a1a; }
 
         .node img {
             width: 45px;
@@ -249,6 +251,7 @@
         .sidebar-icon.em { background: #fef3c7; }
         .sidebar-icon.cg { background: #d1fae5; }
         .sidebar-icon.yh { background: #e0c2ff; }
+        .sidebar-icon.rs { background: #1a1a1a; }
         .sidebar-icon img { width: 24px; height: 24px; }
 
         .sidebar-title h2 { font-size: 18px; color: var(--text-main); }
@@ -364,6 +367,40 @@
         .ai-btn { background: var(--primary); color: white; border: none; border-radius: 20px; padding: 0 15px; cursor: pointer; transition: background 0.2s; display:flex; align-items:center; justify-content:center;}
         .ai-btn:hover { background: #7c3aed; }
         .ai-btn:disabled { background: #c4b5fd; cursor: not-allowed; }
+
+        /* ROCKSTAR MODULE STYLES */
+        .rs-platform-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+        .rs-platform-btn {
+            display: flex; align-items: center; gap: 8px;
+            padding: 10px 12px; border-radius: 10px;
+            border: 2px solid #e5e7eb; background: #f9fafb;
+            cursor: pointer; transition: all 0.2s; font-size: 13px; font-weight: 500;
+            user-select: none;
+        }
+        .rs-platform-btn:hover { border-color: var(--rs-color); background: #fffbeb; }
+        .rs-platform-btn.selected { border-color: var(--rs-color); background: #fffbeb; color: #92400e; }
+        .rs-platform-btn .dot { width: 8px; height: 8px; border-radius: 50%; background: #d1d5db; margin-left: auto; transition: background 0.2s; }
+        .rs-platform-btn.selected .dot { background: var(--rs-color); }
+        .rs-fields { display: none; }
+        .rs-fields.active { display: block; }
+        .rs-send-btn {
+            width: 100%; padding: 13px; border-radius: 10px;
+            background: linear-gradient(135deg, #e8b923, #f59e0b);
+            color: #1a1a1a; font-size: 15px; font-weight: 700;
+            border: none; cursor: pointer; transition: all 0.2s;
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+        }
+        .rs-send-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(232,185,35,0.4); }
+        .rs-send-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; box-shadow: none; }
+        .rs-result-card {
+            background: #1a1a1a; border-radius: 12px; padding: 15px;
+            margin-top: 15px; display: none;
+        }
+        .rs-result-card.show { display: block; }
+        .rs-result-card img { width: 100%; border-radius: 8px; margin-bottom: 10px; }
+        .rs-result-card .rs-video-title { color: white; font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+        .rs-result-card .rs-sent-to { color: var(--rs-color); font-size: 12px; }
+        .rs-result-card .rs-error { color: #f87171; font-size: 12px; margin-top: 4px; }
     </style>
 </head>
 <body>
@@ -447,6 +484,126 @@
                 <div style="font-weight: 500; font-size: 15px;">Yahoo Mail</div>
                 <div style="font-size: 12px; color: var(--text-muted);">Send via Yahoo SMTP</div>
             </div>
+        </div>
+
+        <div class="catalog-item" id="catalog-rs" onclick="addModule('rs')">
+            <div class="sidebar-icon rs">
+                <svg width="24" height="24" viewBox="0 0 100 100" fill="none">
+                    <circle cx="50" cy="50" r="48" stroke="#e8b923" stroke-width="4" fill="none"/>
+                    <text x="50" y="66" text-anchor="middle" font-size="52" font-weight="900" font-family="Arial Black,sans-serif" fill="#e8b923">R</text>
+                </svg>
+            </div>
+            <div>
+                <div style="font-weight: 500; font-size: 15px;">GTA 6 Trailer</div>
+                <div style="font-size: 12px; color: var(--text-muted);">Send latest Rockstar video</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Rockstar GTA6 Sidebar -->
+    <div class="sidebar" id="sidebar-rs" style="width: 440px; right: -440px;">
+        <div class="sidebar-header">
+            <div class="sidebar-icon rs">
+                <svg width="28" height="28" viewBox="0 0 100 100" fill="none">
+                    <circle cx="50" cy="50" r="46" stroke="#e8b923" stroke-width="6" fill="none"/>
+                    <text x="50" y="68" text-anchor="middle" font-size="58" font-weight="900" font-family="Arial Black,sans-serif" fill="#e8b923">R</text>
+                </svg>
+            </div>
+            <div class="sidebar-title">
+                <h2 style="color: #1a1a1a;">GTA 6 Trailer</h2>
+                <p>Rockstar Games Module</p>
+            </div>
+            <button class="close-btn" onclick="closeModals()">&times;</button>
+        </div>
+
+        <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px; line-height: 1.5;">
+            Отправляет <strong>последнее видео</strong> с официального канала Rockstar Games на выбранные платформы.
+        </p>
+
+        <div style="font-size: 13px; font-weight: 600; margin-bottom: 10px; color: var(--text-main);">Куда отправить:</div>
+        <div class="rs-platform-grid">
+            <div class="rs-platform-btn" id="rs-btn-tg" onclick="toggleRsPlatform('tg')">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/8/82/Telegram_logo.svg" style="width:18px;height:18px;"> Telegram
+                <div class="dot"></div>
+            </div>
+            <div class="rs-platform-btn" id="rs-btn-dc" onclick="toggleRsPlatform('dc')">
+                <img src="https://assets-global.website-files.com/6257adef93867e50d84d30e2/636e0a6a49cf127bf92de1e2_icon_clyde_blurple_RGB.png" style="width:18px;height:18px;"> Discord
+                <div class="dot"></div>
+            </div>
+            <div class="rs-platform-btn" id="rs-btn-em" onclick="toggleRsPlatform('em')">
+                <span style="font-size:16px;">📧</span> Gmail
+                <div class="dot"></div>
+            </div>
+            <div class="rs-platform-btn" id="rs-btn-yh" onclick="toggleRsPlatform('yh')">
+                <span style="font-size:14px; font-weight:bold; color:#6001d2;">Y!</span> Yahoo Mail
+                <div class="dot"></div>
+            </div>
+        </div>
+
+        <div class="rs-fields" id="rs-fields-tg">
+            <div style="font-size: 12px; font-weight: 600; color: var(--tg-color); margin-bottom: 8px;">📨 Telegram</div>
+            <div class="form-group">
+                <label>Bot Token *</label>
+                <input type="text" id="rsConfigBotToken" placeholder="8887...">
+            </div>
+            <div class="form-group">
+                <label>Chat ID *</label>
+                <input type="text" id="rsConfigChatId" placeholder="@channel или -100...">
+            </div>
+        </div>
+
+        <div class="rs-fields" id="rs-fields-dc">
+            <div style="font-size: 12px; font-weight: 600; color: var(--dc-color); margin-bottom: 8px;">🎙 Discord</div>
+            <div class="form-group">
+                <label>Webhook URL *</label>
+                <input type="text" id="rsConfigWebhook" placeholder="https://discord.com/api/webhooks/...">
+            </div>
+        </div>
+
+        <div class="rs-fields" id="rs-fields-em">
+            <div style="font-size: 12px; font-weight: 600; color: var(--em-color); margin-bottom: 8px;">📧 Gmail</div>
+            <div class="form-group">
+                <label>Gmail Address *</label>
+                <input type="text" id="rsConfigEmailUser" placeholder="you@gmail.com">
+            </div>
+            <div class="form-group">
+                <label>App Password *</label>
+                <input type="password" id="rsConfigEmailPass" placeholder="16-letter app password">
+            </div>
+            <div class="form-group">
+                <label>Send To *</label>
+                <input type="text" id="rsConfigEmailTo" placeholder="recipient@gmail.com">
+            </div>
+        </div>
+
+        <div class="rs-fields" id="rs-fields-yh">
+            <div style="font-size: 12px; font-weight: 600; color: var(--yh-color); margin-bottom: 8px;">Y! Yahoo Mail</div>
+            <div class="form-group">
+                <label>Yahoo Address *</label>
+                <input type="text" id="rsConfigYahooUser" placeholder="you@yahoo.com">
+            </div>
+            <div class="form-group">
+                <label>App Password *</label>
+                <input type="password" id="rsConfigYahooPass" placeholder="App password">
+            </div>
+            <div class="form-group">
+                <label>Send To *</label>
+                <input type="text" id="rsConfigYahooTo" placeholder="recipient@example.com">
+            </div>
+        </div>
+
+        <div class="rs-result-card" id="rsResultCard">
+            <img id="rsResultThumb" src="" alt="Trailer thumbnail">
+            <div class="rs-video-title" id="rsResultTitle"></div>
+            <div class="rs-sent-to" id="rsResultSentTo"></div>
+            <div class="rs-error" id="rsResultErrors"></div>
+        </div>
+
+        <div style="display: flex; gap: 10px; margin-top: 15px;">
+            <button class="btn-danger" style="flex: 1;" onclick="removeModule('rs')">Delete</button>
+            <button class="rs-send-btn" id="rsSendBtn" style="flex: 2;" onclick="sendGtaTrailer()">
+                🎮 Отправить трейлер
+            </button>
         </div>
     </div>
 
@@ -663,10 +820,90 @@
                     </div>
                     <div class="node-label">Yahoo</div>
                 </div>
+            `,
+            rs: `
+                <div class="node-wrapper action-node" id="rsNodeWrapper">
+                    <div class="node rs" onclick="openSidebar('rs')" style="background: #1a1a1a; position: relative; overflow: hidden;">
+                        <svg width="50" height="50" viewBox="0 0 100 100" fill="none">
+                            <circle cx="50" cy="50" r="46" stroke="#e8b923" stroke-width="6" fill="none"/>
+                            <text x="50" y="68" text-anchor="middle" font-size="58" font-weight="900" font-family="Arial Black,sans-serif" fill="#e8b923">R</text>
+                        </svg>
+                    </div>
+                    <div class="node-label">GTA 6</div>
+                </div>
             `
         };
 
         let activeModules = ['tg'];
+        let rsSelectedPlatforms = new Set();
+
+        function toggleRsPlatform(platform) {
+            const btn = document.getElementById('rs-btn-' + platform);
+            const fields = document.getElementById('rs-fields-' + platform);
+            if (rsSelectedPlatforms.has(platform)) {
+                rsSelectedPlatforms.delete(platform);
+                btn.classList.remove('selected');
+                fields.classList.remove('active');
+            } else {
+                rsSelectedPlatforms.add(platform);
+                btn.classList.add('selected');
+                fields.classList.add('active');
+            }
+        }
+
+        async function sendGtaTrailer() {
+            const platforms = [...rsSelectedPlatforms];
+            if (platforms.length === 0) {
+                alert('Выбери хотя бы одну платформу!');
+                return;
+            }
+            const btn = document.getElementById('rsSendBtn');
+            btn.disabled = true;
+            btn.innerHTML = '⏳ Отправляем...';
+
+            const payload = {
+                platforms,
+                bot_token: document.getElementById('rsConfigBotToken').value.trim(),
+                chat_id: document.getElementById('rsConfigChatId').value.trim(),
+                discord_webhook: document.getElementById('rsConfigWebhook').value.trim(),
+                email_user: document.getElementById('rsConfigEmailUser').value.trim(),
+                email_pass: document.getElementById('rsConfigEmailPass').value.trim(),
+                email_to: document.getElementById('rsConfigEmailTo').value.trim(),
+                yahoo_user: document.getElementById('rsConfigYahooUser').value.trim(),
+                yahoo_pass: document.getElementById('rsConfigYahooPass').value.trim(),
+                yahoo_to: document.getElementById('rsConfigYahooTo').value.trim(),
+            };
+
+            try {
+                const res = await fetch('/api/send_gta_trailer', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                const card = document.getElementById('rsResultCard');
+                card.classList.add('show');
+                if (data.success) {
+                    document.getElementById('rsResultThumb').src = data.video.thumbnail;
+                    document.getElementById('rsResultTitle').textContent = '🎬 ' + data.video.title;
+                    document.getElementById('rsResultSentTo').textContent = '✅ Отправлено: ' + data.sent_to.join(', ');
+                    document.getElementById('rsResultErrors').textContent = data.errors.length ? '⚠️ ' + data.errors.join('; ') : '';
+                    btn.innerHTML = '✅ Отправлено!';
+                    setTimeout(() => { btn.innerHTML = '🎮 Отправить трейлер'; btn.disabled = false; }, 3000);
+                } else {
+                    document.getElementById('rsResultThumb').src = '';
+                    document.getElementById('rsResultTitle').textContent = '';
+                    document.getElementById('rsResultSentTo').textContent = '';
+                    document.getElementById('rsResultErrors').textContent = '❌ ' + data.error;
+                    btn.innerHTML = '❌ Ошибка';
+                    setTimeout(() => { btn.innerHTML = '🎮 Отправить трейлер'; btn.disabled = false; }, 3000);
+                }
+            } catch (e) {
+                alert('Ошибка соединения: ' + e.message);
+                btn.innerHTML = '🎮 Отправить трейлер';
+                btn.disabled = false;
+            }
+        }
 
         function renderModules() {
             const container = document.getElementById('actionsColumn');
@@ -675,13 +912,15 @@
             // Render active nodes
             activeModules.forEach(mod => {
                 container.innerHTML += nodeTemplates[mod];
-                document.getElementById('catalog-' + mod).classList.add('disabled');
+                const catEl = document.getElementById('catalog-' + mod);
+                if (catEl) catEl.classList.add('disabled');
             });
 
             // Update catalog items
-            ['tg', 'dc', 'em', 'cg', 'yh'].forEach(mod => {
+            ['tg', 'dc', 'em', 'cg', 'yh', 'rs'].forEach(mod => {
                 if (!activeModules.includes(mod)) {
-                    document.getElementById('catalog-' + mod).classList.remove('disabled');
+                    const catEl = document.getElementById('catalog-' + mod);
+                    if (catEl) catEl.classList.remove('disabled');
                 }
             });
 
