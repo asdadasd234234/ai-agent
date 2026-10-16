@@ -414,19 +414,8 @@
 
     <!-- Node Canvas -->
     <div class="canvas" id="nodeCanvas">
-        
-        <!-- YouTube Node -->
-        <div class="node-wrapper" id="ytNodeWrapper">
-            <div class="node yt" onclick="openSidebar('yt')">
-                <img src="https://upload.wikimedia.org/wikipedia/commons/0/09/YouTube_full-color_icon_%282017%29.svg" alt="YT">
-            </div>
-            <div class="node-label">Watch Videos</div>
-        </div>
-
-        <div class="actions-column" id="actionsColumn">
-            <!-- Modules injected by JS -->
-        </div>
-
+        <div id="sourceColumn"></div>
+        <div class="actions-column" id="actionsColumn"></div>
     </div>
 
     <!-- Bottom Action Bar -->
@@ -645,7 +634,8 @@
         </div>
 
         <div style="display: flex; gap: 10px; margin-top: auto;">
-            <button class="btn-save" style="flex: 1;" onclick="closeModals()">OK</button>
+            <button class="btn-danger" style="flex: 1;" onclick="removeModule('yt')">Delete</button>
+            <button class="btn-save" style="flex: 2;" onclick="closeModals()">OK</button>
         </div>
     </div>
 
@@ -857,7 +847,48 @@
         let activeModules = [];
         let rsSelectedPlatforms = new Set();
 
-        function toggleRsPlatform(platform) {
+        // Which modules are rendered in sourceColumn (first slot) vs actionsColumn (rest)
+        // sourceColumn always shows activeModules[0], actionsColumn shows activeModules[1+]
+
+        function renderModules() {
+            const sourceCol = document.getElementById('sourceColumn');
+            const actionsCol = document.getElementById('actionsColumn');
+            sourceCol.innerHTML = '';
+            actionsCol.innerHTML = '';
+
+            // Update catalog disabled states
+            ['tg', 'dc', 'em', 'cg', 'yh', 'rs', 'yt'].forEach(mod => {
+                const catEl = document.getElementById('catalog-' + mod);
+                if (catEl) catEl.classList.toggle('disabled', activeModules.includes(mod));
+            });
+
+            if (activeModules.length === 0) {
+                // Empty state — show add trigger prompt in center
+                sourceCol.innerHTML = `
+                    <div class="node-wrapper" style="opacity:0.5; cursor:pointer;" onclick="openCatalog()">
+                        <div class="add-module-btn" style="width:90px;height:90px;font-size:36px;">+</div>
+                        <div class="node-label" style="font-size:12px;color:#9ca3af;">Add trigger</div>
+                    </div>
+                `;
+                setTimeout(drawWire, 50);
+                return;
+            }
+
+            // Source node (first module) → left column
+            sourceCol.innerHTML = nodeTemplates[activeModules[0]];
+
+            // Action nodes (rest) → right column
+            for (let i = 1; i < activeModules.length; i++) {
+                actionsCol.innerHTML += nodeTemplates[activeModules[i]];
+            }
+
+            // Add "+" button in actions column if < 7 total
+            if (activeModules.length < 7) {
+                actionsCol.innerHTML += `<div class="add-module-btn" onclick="openCatalog()">+</div>`;
+            }
+
+            setTimeout(drawWire, 50);
+        }
             const btn = document.getElementById('rs-btn-' + platform);
             const fields = document.getElementById('rs-fields-' + platform);
             if (rsSelectedPlatforms.has(platform)) {
@@ -925,71 +956,9 @@
             }
         }
 
-        function renderModules() {
-            const container = document.getElementById('actionsColumn');
-            container.innerHTML = '';
-
-            // Render active nodes
-            activeModules.forEach(mod => {
-                container.innerHTML += nodeTemplates[mod];
-                const catEl = document.getElementById('catalog-' + mod);
-                if (catEl) catEl.classList.add('disabled');
-            });
-
-            // Update catalog items
-            ['tg', 'dc', 'em', 'cg', 'yh', 'rs', 'yt'].forEach(mod => {
-                if (!activeModules.includes(mod)) {
-                    const catEl = document.getElementById('catalog-' + mod);
-                    if (catEl) catEl.classList.remove('disabled');
-                }
-            });
-
-            // Add the "+" button if less than 6 modules
-            if (activeModules.length < 6) {
-                container.innerHTML += `
-                    <div class="add-module-btn" onclick="openCatalog()">
-                        +
-                    </div>
-                `;
-            }
-
-            setTimeout(drawWire, 50); // Redraw wires after DOM updates
-        }
-
-        function addModule(mod) {
-            if (!activeModules.includes(mod)) {
-                activeModules.push(mod);
-                renderModules();
-            }
-            closeModals();
-        }
-
-        function removeModule(mod) {
-            activeModules = activeModules.filter(m => m !== mod);
-            
-            // Clear inputs so backend ignores this action
-            if (mod === 'tg') {
-                document.getElementById('configBotToken').value = '';
-                document.getElementById('configChatId').value = '';
-            } else if (mod === 'dc') {
-                document.getElementById('configDiscordWebhook').value = '';
-            } else if (mod === 'em') {
-                document.getElementById('configEmailUser').value = '';
-                document.getElementById('configEmailPass').value = '';
-                document.getElementById('configEmailTo').value = '';
-            } else if (mod === 'cg') {
-                document.getElementById('configOpenAiKey').value = '';
-            } else if (mod === 'yh') {
-                document.getElementById('configYahooUser').value = '';
-                document.getElementById('configYahooPass').value = '';
-                document.getElementById('configYahooTo').value = '';
-            }
-            
-            renderModules();
-            closeModals();
-        }
 
         function openCatalog() {
+
             document.getElementById('overlay').classList.add('open');
             document.getElementById('catalogModal').classList.add('open');
         }
@@ -997,35 +966,34 @@
         // --- DRAWING THE WIRE ---
         function drawWire() {
             const svgCanvas = document.getElementById('svgCanvas');
-            svgCanvas.innerHTML = ''; // clear existing wires
-            
-            const ytNode = document.getElementById('ytNodeWrapper').querySelector('.node');
-            if (!ytNode) return;
-            const ytRect = ytNode.getBoundingClientRect();
-            const startX = ytRect.left + ytRect.width / 2;
-            const startY = ytRect.top + ytRect.height / 2;
-            
-            document.querySelectorAll('.action-node .node').forEach(actionNode => {
+            svgCanvas.innerHTML = '';
+
+            const sourceNode = document.querySelector('#sourceColumn .node');
+            if (!sourceNode) return;
+            const srcRect = sourceNode.getBoundingClientRect();
+            const startX = srcRect.left + srcRect.width / 2;
+            const startY = srcRect.top + srcRect.height / 2;
+
+            // Draw wires from source to every action-node in actionsColumn
+            document.querySelectorAll('#actionsColumn .action-node .node').forEach(actionNode => {
                 const rect = actionNode.getBoundingClientRect();
                 const endX = rect.left + rect.width / 2;
                 const endY = rect.top + rect.height / 2;
-                
+
                 const controlOffset = 80;
                 const pathData = `M ${startX + 45} ${startY} C ${startX + 45 + controlOffset} ${startY}, ${endX - 45 - controlOffset} ${endY}, ${endX - 45} ${endY}`;
-                
+
                 const wire = document.createElementNS('http://www.w3.org/2000/svg', 'path');
                 wire.setAttribute('class', 'wire');
                 wire.setAttribute('d', pathData);
-                
+
                 const pulse = document.createElementNS('http://www.w3.org/2000/svg', 'path');
                 pulse.setAttribute('class', 'wire-pulse');
                 pulse.setAttribute('d', pathData);
-                
-                // Keep pulse state
                 if (document.getElementById('statusDot').classList.contains('running')) {
                     pulse.style.display = 'block';
                 }
-                
+
                 svgCanvas.appendChild(wire);
                 svgCanvas.appendChild(pulse);
             });
@@ -1070,6 +1038,7 @@
                     
                     // Restore active modules based on backend config
                     let backendModules = [];
+                    if (data.channel_id) backendModules.push('yt'); // YouTube always first (source)
                     if (data.bot_token && data.chat_id) backendModules.push('tg');
                     if (data.discord_webhook) backendModules.push('dc');
                     if (data.email_user && data.email_to) backendModules.push('em');
