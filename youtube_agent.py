@@ -160,7 +160,7 @@ def generate_chatgpt_message(title, link, api_key, prompt):
         user_prompt = prompt.replace('{title}', title).replace('{link}', link)
         
         response = client.chat.completions.create(
-            model="gpt-3.5-turbo",
+            model="gpt-4o-mini",
             messages=[
                 {"role": "system", "content": "Ты креативный ассистент, который пишет привлекательные анонсы для видео."},
                 {"role": "user", "content": user_prompt}
@@ -361,7 +361,7 @@ def ai_build_path():
             messages.append({"role": msg.get("role", "user"), "content": msg.get("content", "")})
             
         response = client.chat.completions.create(
-            model="gpt-3.5-turbo",
+            model="gpt-4o-mini",
             messages=messages,
             response_format={ "type": "json_object" }
         )
